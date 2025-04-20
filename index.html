@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Response Sheet Marks Calculator</title>
   <script src="https://unpkg.com/pdfjs-dist/build/pdf.min.js"></script>
   <style>
@@ -21,26 +21,53 @@
     <h1>Response Sheet Marks Calculator</h1>
     <label for="fileInput">Upload Your Response Sheet PDF:</label>
     <input type="file" id="fileInput" accept=".pdf" />
-    <div class="result" id="result"></div>
+    <div class="result" id="result">Awaiting upload...</div>
   </div>
 
   <script>
     const fileInput = document.getElementById('fileInput');
     const resultDiv = document.getElementById('result');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist/build/pdf.worker.min.js';
 
     fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
-      const loadingTask = pdfjsLib.getDocument(URL.createObjectURL(file));
-      const pdf = await loadingTask.promise;
+      resultDiv.innerHTML = "Processing your response sheet...";
+
+      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
       let fullText = '';
 
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n';
+        fullText += textContent.items.map(item => item.str).join(' ') + '\n';
       }
 
-      const regex = /Question ID[\s\S]*?Option ID
+      // Match all pairs of "Answer Given" and "Correct Answer"
+      const answerPattern = /Answer Given by Candidate:-\s*,?\s*Option ID\s*:\s*-?(\d+)\s+Correct Answer\s*:-\s*Option ID\s*:-?\s*(\d+)/g;
+
+      let correct = 0;
+      let incorrect = 0;
+      let total = 0;
+
+      let match;
+      while ((match = answerPattern.exec(fullText)) !== null) {
+        total++;
+        const given = match[1];
+        const correctAns = match[2];
+        if (given === correctAns) correct++;
+        else incorrect++;
+      }
+
+      resultDiv.innerHTML = `
+        <h3>Result</h3>
+        <p><strong>Total Questions:</strong> ${total}</p>
+        <p style="color: green;"><strong>Correct Answers:</strong> ${correct}</p>
+        <p style="color: red;"><strong>Incorrect Answers:</strong> ${incorrect}</p>
+        <p style="color: orange;"><strong>Unattempted:</strong> ${total - correct - incorrect}</p>
+      `;
+    });
+  </script>
+</body>
+</html>
