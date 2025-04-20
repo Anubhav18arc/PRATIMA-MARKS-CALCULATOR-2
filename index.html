@@ -6,12 +6,12 @@
   <script src="https://unpkg.com/pdfjs-dist/build/pdf.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
-    .container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+    .container {
+      background: #fff; padding: 20px; border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 600px; margin: auto;
+    }
     input[type="file"] {
-      margin-top: 10px;
-      display: block;
-      font-size: 16px;
-      padding: 8px;
+      margin-top: 10px; display: block; font-size: 16px; padding: 8px;
     }
     .result { margin-top: 20px; font-size: 18px; }
   </style>
@@ -25,4 +25,22 @@
   </div>
 
   <script>
-    const fileInput = document.get
+    const fileInput = document.getElementById('fileInput');
+    const resultDiv = document.getElementById('result');
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const loadingTask = pdfjsLib.getDocument(URL.createObjectURL(file));
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n';
+      }
+
+      const regex = /Question ID[\s\S]*?Option ID
