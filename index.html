@@ -10,32 +10,43 @@
       background: #fff; padding: 20px; border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 600px; margin: auto;
     }
-    input[type="file"] {
-      margin-top: 10px; display: block; font-size: 16px; padding: 8px;
+    input[type="file"], button {
+      margin-top: 10px; display: block; font-size: 16px; padding: 10px; width: 100%;
     }
     .result { margin-top: 20px; font-size: 18px; }
+    button { background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 5px; }
+    button:hover { background-color: #0056b3; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Response Sheet Marks Calculator</h1>
-    <label for="fileInput">Upload Your Response Sheet PDF:</label>
+    <label for="fileInput">Choose Your Response Sheet PDF:</label>
     <input type="file" id="fileInput" accept=".pdf" />
+    <button id="uploadBtn" disabled>Upload and Check Marks</button>
     <div class="result" id="result">Awaiting upload...</div>
   </div>
 
   <script>
-    const fileInput = document.getElementById('fileInput');
-    const resultDiv = document.getElementById('result');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist/build/pdf.worker.min.js';
 
-    fileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const resultDiv = document.getElementById('result');
 
+    let selectedFile = null;
+
+    fileInput.addEventListener('change', (e) => {
+      selectedFile = e.target.files[0];
+      resultDiv.innerHTML = "File selected. Click the button to calculate marks.";
+      uploadBtn.disabled = !selectedFile;
+    });
+
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
       resultDiv.innerHTML = "Processing your response sheet...";
 
-      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(selectedFile)).promise;
       let fullText = '';
 
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -44,7 +55,6 @@
         fullText += textContent.items.map(item => item.str).join(' ') + '\n';
       }
 
-      // Match all pairs of "Answer Given" and "Correct Answer"
       const answerPattern = /Answer Given by Candidate:-\s*,?\s*Option ID\s*:\s*-?(\d+)\s+Correct Answer\s*:-\s*Option ID\s*:-?\s*(\d+)/g;
 
       let correct = 0;
