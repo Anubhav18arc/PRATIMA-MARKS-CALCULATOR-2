@@ -82,7 +82,8 @@
       if (!pdfText) return;
       resultDiv.innerHTML = "Calculating...";
 
-      const answerPattern = /Answer Given by Candidate:-\s*,?\s*Option ID\s*:\s*-?(\d+)\s+Correct Answer\s*:-\s*Option ID\s*:-?\s*(\d+)/g;
+      // Modified regular expression to match different formats
+      const answerPattern = /Answer Given by Candidate\s*[:-]\s*Option ID\s*:\s*(\d+)\s*Correct Answer\s*[:-]\s*Option ID\s*:\s*(\d+)/g;
 
       let correct = 0;
       let incorrect = 0;
@@ -96,6 +97,11 @@
         if (given === correctAns) correct++;
         else incorrect++;
       }
+
+      // Logging the results for debugging
+      console.log(`Total Questions: ${total}`);
+      console.log(`Correct Answers: ${correct}`);
+      console.log(`Incorrect Answers: ${incorrect}`);
 
       resultDiv.innerHTML = `
         <h3>Result</h3>
