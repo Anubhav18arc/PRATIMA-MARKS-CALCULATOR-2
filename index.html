@@ -16,6 +16,12 @@
     .result { margin-top: 20px; font-size: 18px; }
     button { background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 5px; }
     button:hover { background-color: #0056b3; }
+    .progress {
+      width: 100%; background: #ddd; border-radius: 5px; overflow: hidden; margin-top: 15px;
+    }
+    .progress-bar {
+      height: 20px; width: 0%; background: #28a745; text-align: center; color: white; font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -23,7 +29,12 @@
     <h1>Response Sheet Marks Calculator</h1>
     <label for="fileInput">Choose Your Response Sheet PDF:</label>
     <input type="file" id="fileInput" accept=".pdf" />
-    <button id="uploadBtn" disabled>Upload and Check Marks</button>
+    
+    <div class="progress" id="progressContainer" style="display:none;">
+      <div class="progress-bar" id="progressBar">0%</div>
+    </div>
+
+    <button id="calculateBtn" disabled>Calculate Marks</button>
     <div class="result" id="result">Awaiting upload...</div>
   </div>
 
@@ -31,29 +42,45 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist/build/pdf.worker.min.js';
 
     const fileInput = document.getElementById('fileInput');
-    const uploadBtn = document.getElementById('uploadBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressContainer = document.getElementById('progressContainer');
+    const calculateBtn = document.getElementById('calculateBtn');
     const resultDiv = document.getElementById('result');
 
     let selectedFile = null;
+    let pdfText = '';
 
-    fileInput.addEventListener('change', (e) => {
+    fileInput.addEventListener('change', async (e) => {
       selectedFile = e.target.files[0];
-      resultDiv.innerHTML = "File selected. Click the button to calculate marks.";
-      uploadBtn.disabled = !selectedFile;
-    });
+      resultDiv.innerHTML = "Uploading...";
+      progressContainer.style.display = "block";
+      progressBar.style.width = "0%";
+      progressBar.textContent = "0%";
 
-    uploadBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
-      resultDiv.innerHTML = "Processing your response sheet...";
 
-      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(selectedFile)).promise;
-      let fullText = '';
+      const loadingTask = pdfjsLib.getDocument(URL.createObjectURL(selectedFile));
+      const pdf = await loadingTask.promise;
 
+      pdfText = '';
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+        pdfText += textContent.items.map(item => item.str).join(' ') + '\n';
+
+        // Update progress bar
+        const percent = Math.round((i / pdf.numPages) * 100);
+        progressBar.style.width = percent + "%";
+        progressBar.textContent = percent + "%";
       }
+
+      resultDiv.innerHTML = "File uploaded successfully. Click 'Calculate Marks' to proceed.";
+      calculateBtn.disabled = false;
+    });
+
+    calculateBtn.addEventListener('click', () => {
+      if (!pdfText) return;
+      resultDiv.innerHTML = "Calculating...";
 
       const answerPattern = /Answer Given by Candidate:-\s*,?\s*Option ID\s*:\s*-?(\d+)\s+Correct Answer\s*:-\s*Option ID\s*:-?\s*(\d+)/g;
 
@@ -62,7 +89,7 @@
       let total = 0;
 
       let match;
-      while ((match = answerPattern.exec(fullText)) !== null) {
+      while ((match = answerPattern.exec(pdfText)) !== null) {
         total++;
         const given = match[1];
         const correctAns = match[2];
