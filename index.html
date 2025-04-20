@@ -1,8 +1,12 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Response Sheet Marks Calculator</title>
-  <script src="https://unpkg.com/pdfjs-dist/build/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+  </script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
     .container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -15,7 +19,9 @@
     <h1>Response Sheet Marks Calculator</h1>
     <input type="file" id="fileInput" accept=".pdf" />
     <div class="result" id="result"></div>
-  </div>  <script>
+  </div>
+
+  <script>
     const fileInput = document.getElementById('fileInput');
     const resultDiv = document.getElementById('result');
 
@@ -23,40 +29,45 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
-      let fullText = '';
+      try {
+        const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+        let fullText = '';
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-      }
-
-      const lines = fullText.split('\n');
-      let correct = 0;
-      let incorrect = 0;
-      let total = 0;
-
-      for (let line of lines) {
-        const givenMatch = line.match(/Answer Given by Candidate:-\s*, Option ID : -?(\d+)/);
-        const correctMatch = line.match(/Correct Answer :-\s*Option ID :- ?(\d+)/);
-
-        if (givenMatch && correctMatch) {
-          total++;
-          const given = givenMatch[1];
-          const correctAns = correctMatch[1];
-
-          if (given === correctAns) correct++;
-          else incorrect++;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          fullText += textContent.items.map(item => item.str).join(' ') + '\n';
         }
-      }
 
-      resultDiv.innerHTML = `
-        <h3>Result</h3>
-        <p>Total Questions: ${total}</p>
-        <p style="color: green;">Correct Answers: ${correct}</p>
-        <p style="color: red;">Incorrect Answers: ${incorrect}</p>
-      `;
+        const lines = fullText.split('\n');
+        let correct = 0;
+        let incorrect = 0;
+        let total = 0;
+
+        for (let line of lines) {
+          const givenMatch = line.match(/Answer Given by Candidate:-\s*, Option ID : -?(\d+)/);
+          const correctMatch = line.match(/Correct Answer :-\s*Option ID :- ?(\d+)/);
+
+          if (givenMatch && correctMatch) {
+            total++;
+            const given = givenMatch[1];
+            const correctAns = correctMatch[1];
+
+            if (given === correctAns) correct++;
+            else incorrect++;
+          }
+        }
+
+        resultDiv.innerHTML = `
+          <h3>Result</h3>
+          <p>Total Questions: ${total}</p>
+          <p style="color: green;">Correct Answers: ${correct}</p>
+          <p style="color: red;">Incorrect Answers: ${incorrect}</p>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<p style="color:red;">Error processing PDF: ${err.message}</p>`;
+      }
     });
-  </script></body>
+  </script>
+</body>
 </html>
